@@ -1,58 +1,72 @@
 from Application import db, EnumStore
 from sqlalchemy.orm import Mapped, mapped_column, validates
-from typing import Annotated
+# from marshmallow import Schema, fields, post_load, validate, validates, ValidationError
+import datetime
+from instance import DefaultConfiguration
+import string
+from werkzeug import exceptions
 from email_validator import validate_email, EmailNotValidError
 
-Field = EnumStore.JSONSchema.User
-ErrorMessage = EnumStore.ErrorMessage
+from icecream import ic # type: ignore
+
+UserField = EnumStore.JSONSchema.User
+UserError = EnumStore.ErrorMessage.User
+GeneralError = EnumStore.ErrorMessage.General
 
 class User(db.Model): # type: ignore
-    """A declarative mapped class represting the user model for sqlalchemy ORM.
-
-    Fields:
-        id: primary key for database, not needed for instantiating model class
-        name: username within 4 to 30 characters containing lowercase characters or digits or underscores. username cannot start with a digit or underscore
-        email: unique email
-        password: password within 8 to 16 characters containing no spaces
-    
-    Methods:
-        validator: validates the input data
-    
-    Classes:
-        ExceptionStatements: A collection of StrEnum that represents appropriate exception messages 
+    """class to serialize, deserialize and validate the user model
     """
     id: Mapped[int] = mapped_column(primary_key=True, init=False)
-    name: Mapped[Annotated[str, 30]] = mapped_column(Field.NAME.value)
-    email: Mapped[Annotated[str, 320]] = mapped_column(Field.EMAIL.value,unique=True)
-    password: Mapped[Annotated[str,16]] = mapped_column(Field.PASSWORD.value)
     
-    @validates(*Field)
-    def validator(self, key: str, value: str):
-        # we can also put marshmellow logic here and add schema classes inside the User class
-        # if the mapped class contais a lot of Field then we can create a dictionary of "field : validator" and call the appropriate validator for given field, we can directly use marshmellow as well
-        if key == Field.NAME:
-            value = value.strip()
-            if value == '' : raise ValueError(ErrorMessage.NameField.EMPTY.value)
-            if len(value) < 4 or len(value) > 30: raise ValueError(ErrorMessage.NameField.LENGTH.value)
-            if value[0] in '1234567890_' : raise ValueError(ErrorMessage.NameField.STARTSWITH.value)
-            for char in value:
-                if not ((char.isalpha() and char.islower()) or (char in '1234567890_')): raise ValueError(ErrorMessage.NameField.CONTAIN.value)
-
-        elif key == Field.EMAIL:
-            try:
-                emailinfo = validate_email(value, check_deliverability=False)
-                value = emailinfo.normalized
-            except EmailNotValidError as e:
-                raise ValueError(str(e))
-
-        elif key == Field.PASSWORD:
-            # we can use the third parth module named password-validator for strong password checking 
-            value = value.strip()
-            if value == '' : raise ValueError(ErrorMessage.PasswordField.EMPTY.value)
-            if len(value) < 8 or len(value) > 16 : raise ValueError(ErrorMessage.PasswordField.LENGTH.value)
-            for char in value:
-                if char.isspace() : raise ValueError(ErrorMessage.PasswordField.SPACE.value)      
-                     
+    name: Mapped[str] = mapped_column(UserField.NAME, nullable=False)
+    email: Mapped[str] = mapped_column(UserField.EMAIL, unique=True, nullable=False)
+    created_at: Mapped[datetime.datetime] = mapped_column(UserField.CREATEDAT, nullable=False, default=datetime.datetime.now(),init=False)
+    last_active_at: Mapped[datetime.date] = mapped_column(UserField.LASTACTIVEAT, nullable=False, default=datetime.date.today(), init=False) 
+        
+    
+    def nameValidator(self, key: str, value: str) -> str:
+        if not type(value) == str : raise exceptions.BadRequest(GeneralError.TYPE.value.format(type=str))
+        value = value.strip()
+        if  len(value) < (minimum:=DefaultConfiguration.MIN_USERNAME_LENGTH) or \
+            len(value) > (maximum:=DefaultConfiguration.MAX_USERNAME_LENGTH):
+                raise exceptions.BadRequest(UserError.Name.LENGTH.value.format(min=minimum,max=maximum))
+        for char in value:
+            if char not in string.ascii_letters:
+                raise exceptions.BadRequest(UserError.Name.CONTAIN.value)
         return value
     
     
+    def emailValidator(self, key: str, value: str) -> str:
+        if not type(value) == str : raise exceptions.BadRequest(GeneralError.TYPE.value.format(type=str))
+        try:
+            email_info = validate_email(value,check_deliverability=False)
+        except EmailNotValidError as err:
+            raise exceptions.BadRequest(str(err))
+        else:
+            return email_info.normalized
+    
+    
+    def createdatValidator(self, key: str, value: datetime.datetime) -> datetime.datetime:
+        if not type(value) == datetime.datetime : raise exceptions.BadRequest(GeneralError.TYPE.value.format(type=datetime.datetime))
+        if self.created_at is not None:
+            raise exceptions.BadRequest(UserError.CreatedAt.CONSTANT.value)
+        return value
+    
+    
+    def lastactiveatValidator(self, key: str, value: datetime.date) -> datetime.date:
+        if not type(value) == datetime.date : raise exceptions.BadRequest(GeneralError.TYPE.value.format(type=datetime.date))
+        
+        if self.last_active_at is not None and value < self.last_active_at:
+            raise exceptions.BadRequest(UserError.LastActiveAt.CONFLICT.value)
+        return value
+    
+    
+    @validates(*UserField)
+    def validator(self, key: str, value):
+        fieldValidator = {
+            UserField.NAME.value : self.nameValidator,
+            UserField.EMAIL : self.emailValidator,
+            UserField.CREATEDAT : self.createdatValidator,
+            UserField.LASTACTIVEAT : self.lastactiveatValidator
+        }
+        return fieldValidator[key](key,value) # type: ignore

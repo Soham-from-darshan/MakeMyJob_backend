@@ -1,14 +1,22 @@
-from flask import Flask, redirect, url_for
+from flask import Flask, request
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import MappedAsDataclass, DeclarativeBase
 from werkzeug import exceptions
 from typing import cast
 from enum import StrEnum
-from typing import NoReturn
+import json
+
 
 class Base(MappedAsDataclass, DeclarativeBase):
-    pass
-
+    def serialize(self) -> dict:
+        table = self.__table__
+        result = {}
+        for col in table.columns:
+            col_name = str(col).split('.')[-1]
+            result[col_name] = getattr(self, col_name)
+        # return json.dumps(result, default=str) # for stringification
+        return result
+    
 db: SQLAlchemy = SQLAlchemy(model_class=Base)
 
 def create_app(*,configClass: type) -> Flask:
@@ -28,14 +36,12 @@ def create_app(*,configClass: type) -> Flask:
     with app.app_context():
         db.create_all()    
 
-    from Application.controller import UserController
-    app.register_blueprint(UserController.blueprint)
+    # register blueprints
     
-    @app.route('/')
-    def home():
-        return redirect(url_for('User.getAll'))
+    @app.before_request
+    def check_json():
+        if not request.is_json(): raise exceptions.UnsupportedMediaType(EnumStore.ErrorMessage.RequestError.MEDIATYPE.value)
     
-    # This will only capture all subclasses of HTTPException, which means that other errors will be caught by flask and generate default 500 Internal server error which results in HTTPException, the original error will be available via e.original_exception
     @app.errorhandler(exceptions.HTTPException)
     def jsonify_default_errors(e: exceptions.HTTPException):
         """Convert the default error pages to json with three fields: code, name and description. Use args as description, if InternalServerError is handled then description is set to original error's args if it exists. Code and name is set to error's default code and name. 
@@ -95,8 +101,7 @@ class EnumStore:
         POST = 'POST'
         PATCH = 'PATCH'
         DELETE = 'DELETE'
-        
-        
+    
     class JSONSchema:
         """Collection of enums which represents json schema for api. 
         """
@@ -104,23 +109,26 @@ class EnumStore:
             NAME = 'name'
             CODE = 'code'
             DESCRIPTION = 'description'
-            
+        
         class User(StrEnum):
             NAME = 'name'
             EMAIL = 'email'
-            PASSWORD = 'password'
-    
+            CREATEDAT = 'created_at'
+            LASTACTIVEAT = 'last_active_at'
     
     class ErrorMessage:
-        """Collection of enums which represents error messages.
-        """
-        class NameField(StrEnum):
-            EMPTY = 'Username cannot be empty string'
-            LENGTH = 'Username must have minimum length of 4 and maximum of 30'
-            STARTSWITH = 'Username cannot start with a digit or underscore'
-            CONTAIN = 'Username can only contain lowercase characters or digits or underscores'
+        class General(StrEnum):
+            MEDIATYPE = 'Only json is allowed as request body'
+            REQUIRED = 'The field {field} is required'
+            TYPE = 'The value is not {type} type'
         
-        class PasswordField(StrEnum):
-            EMPTY = 'Password cannot be empty string'
-            LENGTH = 'Password must have minimum length of 8 and maximum of 16'
-            SPACE = 'Password cannot contain any white space'
+        class User:
+            class Name(StrEnum):
+                LENGTH = 'The length of name can be between {min} to {max} characters'
+                CONTAIN = 'The username can only contain ascii letters'
+            
+            class CreatedAt(StrEnum):
+                CONSTANT = 'The field is constant'
+            
+            class LastActiveAt(StrEnum):
+                CONFLICT = 'The last date activity is conflicting'
