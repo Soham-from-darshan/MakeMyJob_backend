@@ -1,8 +1,4 @@
-# testing for last_activate
-# testing for email uniquness
-
 from Application import EnumStore
-from Application.models import User
 
 UserField = EnumStore.JSONSchema.User
 ErrorMessage = EnumStore.ErrorMessage

@@ -4,8 +4,7 @@ from sqlalchemy.orm import MappedAsDataclass, DeclarativeBase
 from werkzeug import exceptions
 from typing import cast
 from enum import StrEnum
-import json
-from instance import DefaultConfiguration
+from instance import DefaultConfiguration as dcfg
 
 
 class Base(MappedAsDataclass, DeclarativeBase):
@@ -124,8 +123,8 @@ class EnumStore:
         
         class User:
             class Name(StrEnum):
-                LENGTH = 'The length of name can be between {min} to {max} characters'.format(min=DefaultConfiguration.MIN_USERNAME_LENGTH,max=DefaultConfiguration.MAX_USERNAME_LENGTH)
-                CONTAIN = 'The username can only contain "{contain}"'.format(contain=DefaultConfiguration.USERNAME_CAN_CONTAIN)
+                LENGTH = 'The length of name can be between {min} to {max} characters'.format(min=dcfg.MIN_USERNAME_LENGTH,max=dcfg.MAX_USERNAME_LENGTH)
+                CONTAIN = 'The username can only contain "{contain}"'.format(contain=dcfg.USERNAME_CAN_CONTAIN)
             
             class CreatedAt(StrEnum):
                 CONSTANT = 'The field is constant'
