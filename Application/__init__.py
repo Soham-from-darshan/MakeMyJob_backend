@@ -5,6 +5,7 @@ from werkzeug import exceptions
 from typing import cast
 from enum import StrEnum
 import json
+from instance import DefaultConfiguration
 
 
 class Base(MappedAsDataclass, DeclarativeBase):
@@ -120,12 +121,11 @@ class EnumStore:
         class General(StrEnum):
             MEDIATYPE = 'Only json is allowed as request body'
             REQUIRED = 'The field {field} is required'
-            TYPE = 'The value is not {type} type'
         
         class User:
             class Name(StrEnum):
-                LENGTH = 'The length of name can be between {min} to {max} characters'
-                CONTAIN = 'The username can only contain ascii letters'
+                LENGTH = 'The length of name can be between {min} to {max} characters'.format(min=DefaultConfiguration.MIN_USERNAME_LENGTH,max=DefaultConfiguration.MAX_USERNAME_LENGTH)
+                CONTAIN = 'The username can only contain "{contain}"'.format(contain=DefaultConfiguration.USERNAME_CAN_CONTAIN)
             
             class CreatedAt(StrEnum):
                 CONSTANT = 'The field is constant'
