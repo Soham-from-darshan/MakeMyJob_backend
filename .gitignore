@@ -6,7 +6,7 @@ __pycache__/
 .mypy_cache
 *_cache
 
-instance/
+# instance/
 
 .pytest_cache/
 .coverage
