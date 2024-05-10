@@ -1,7 +1,9 @@
 from werkzeug import exceptions
 from Application import EnumStore
 from typing import cast        
-        
+from Application import EnumStore
+
+ErrorMessage = EnumStore.ErrorMessage
 
 def jsonify_default_errors(e: exceptions.HTTPException):
     """Convert the default error pages to json with three fields: code, name and description. Use args as description, if InternalServerError is handled then description is set to original error's args if it exists. Code and name is set to error's default code and name. 
@@ -39,4 +41,4 @@ def handle_value_error(e: ValueError):
     return jsonify_default_errors(exceptions.BadRequest(e.args[0]))
 
 def handle_key_error(e: KeyError):
-    return jsonify_default_errors(exceptions.BadRequest(f"{e.args[0]} is required"))
+    return jsonify_default_errors(exceptions.BadRequest(ErrorMessage.General.REQUIRED.value.format(field=e.args[0])))

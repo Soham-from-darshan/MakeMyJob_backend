@@ -9,6 +9,7 @@ dnspython==2.6.1
 email_validator==2.1.1
 executing==2.0.1
 Flask==3.0.3
+Flask-JWT-Extended==4.6.0
 Flask-SQLAlchemy==3.1.1
 greenlet==3.0.3
 gunicorn==22.0.0
@@ -22,6 +23,7 @@ marshmallow==3.21.1
 packaging==24.0
 pluggy==1.5.0
 Pygments==2.17.2
+PyJWT==2.8.0
 pytest==8.1.1
 requests==2.31.0
 six==1.16.0

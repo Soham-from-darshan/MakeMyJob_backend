@@ -5,6 +5,7 @@ from werkzeug import exceptions
 from typing import cast
 from enum import StrEnum
 from instance import DefaultConfiguration as dcfg
+from flask_jwt_extended import JWTManager
 
 
 class Base(MappedAsDataclass, DeclarativeBase):
@@ -18,6 +19,8 @@ class Base(MappedAsDataclass, DeclarativeBase):
         return result
     
 db: SQLAlchemy = SQLAlchemy(model_class=Base)
+jwt = JWTManager()
+
 
 def create_app(*,configClass: type) -> Flask:
     """Create WSGI application instance, apply given configuration. Initialize extensions and create database from models then register blueprints and a generic error handler to jsonify any defalut errors. Return app instance.
@@ -30,14 +33,24 @@ def create_app(*,configClass: type) -> Flask:
     """
     app = Flask(__name__, instance_relative_config=True)
     app.config.from_object(configClass())
+    
+    import Application.errorhandlers as errhndl
+    app.register_error_handler(exceptions.HTTPException, errhndl.jsonify_default_errors)
+    app.register_error_handler(ValueError, errhndl.handle_value_error)
+    app.register_error_handler(KeyError, errhndl.handle_key_error)
 
+    jwt.init_app(app)
     db.init_app(app)
     import Application.models as models
     with app.app_context():
         db.create_all()    
 
-    # register blueprints
+    import Application.controllers.authentication as auth
+    app.register_blueprint(auth.bp)
     
+    @app.route('/')
+    def home():
+        return 'Hello world'
     
     # """These routes mimic the behaviour of unexpected errors. 
     # """
@@ -96,3 +109,8 @@ class EnumStore:
             
             class LastActiveAt(StrEnum):
                 CONFLICT = 'The last date activity is conflicting'
+
+        class Controller(StrEnum):
+            """Error Messages by controllers
+            """
+            EXISTS = 'User is already present in database'
