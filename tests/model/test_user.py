@@ -5,6 +5,8 @@ from Application import EnumStore
 import datetime
 from icecream import ic # type: ignore
 
+# ic.disable()
+
 UserSchema = EnumStore.JSONSchema.User
 UserErrorMessage = EnumStore.ErrorMessage.User
 valid_email = 'sohamjobanputra7@gmail.com'
@@ -16,8 +18,9 @@ def testSerialization():
         UserSchema.EMAIL.value : valid_email
     }
     user = User(**obj).serialize()
-    assert type(user) == dict
     ic(user)
+    assert type(user) == dict
+
 
 class TestValidation:
     @staticmethod
@@ -29,7 +32,7 @@ class TestValidation:
         }
         with pytest.raises(ValueError) as err_info:
             User(**obj)
-        
+        ic(str(err_info.value))
         assert str(err_info.value).split(':')[-1].strip() == err
     
     
@@ -52,6 +55,7 @@ class TestValidation:
         user = User(**obj)
         with pytest.raises(ValueError) as err_info:
             user.created_at -= datetime.timedelta(days=1)
+        ic(str(err_info.value))
         assert str(err_info.value).split(':')[-1].strip() == UserErrorMessage.CreatedAt.CONSTANT.value
 
     
@@ -65,5 +69,6 @@ class TestValidation:
         user.last_active_at += datetime.timedelta(days=1)
         with pytest.raises(ValueError) as err_info:
             user.last_active_at -= datetime.timedelta(days=1)
+        ic(str(err_info.value))
         assert str(err_info.value).split(':')[-1].strip() == UserErrorMessage.LastActiveAt.CONFLICT.value
         
