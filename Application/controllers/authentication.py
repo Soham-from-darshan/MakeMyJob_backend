@@ -49,10 +49,26 @@ def signup():
 		raise exceptions.BadRequest(ErrorMessage.EXISTS.value)
 	# verify the email via otp
 	return jsonify(token=create_access_token(identity=user))
-	
 
-def logout():
-	pass
+
+@bp.route('/login',methods=[HTTPMethod.POST.value])
+def login():
+	rdata = request.get_json()
+	email = rdata[UserScema.EMAIL.value]
+	user = User.query.filter_by(email=email).one_or_none()
+	if user is not None:
+		# verify email via otp
+		return jsonify(token=create_access_token(identity=user))
+
+	name = rdata[UserScema.NAME.value]
+	user = User(name=name,email=email) # also validates user
+	db.session.add(user)
+	# verify email via otp
+	db.session.commit()
+	return jsonify(token=create_access_token(identity=user))
+
+
+
 
 def delete_account():
 	pass
