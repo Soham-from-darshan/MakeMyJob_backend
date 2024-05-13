@@ -36,7 +36,7 @@ class DefaultConfiguration(FlaskDefaultConfiguration):
     MIN_USERNAME_LENGTH = 2
     MAX_USERNAME_LENGTH = 20
     USERNAME_CAN_CONTAIN = string.ascii_letters + " "
-    OTP_EXPIRY_IN_MINUTES = 1
+    OTP_EXPIRY_IN_MINUTES = 10
 
     MAIL_USERNAME = email_creds['address']
     MAIL_DEFAULT_SENDER = email_creds['address']
@@ -56,6 +56,7 @@ class TestingConfiguration(DefaultConfiguration):
     SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
     # SQLALCHEMY_DATABASE_URI = 'sqlite:///test.db'
     # SQLALCHEMY_ECHO=True
+    MAIL_SUPPRESS_SEND = False
 
 class DeploymentConfiguration(DefaultConfiguration):
     SQLALCHEMY_DATABASE_URI = 'sqlite:///production.db'

@@ -3,7 +3,7 @@ from Application import EnumStore, db, jwt, mail, cipher
 from Application.models import User
 from sqlalchemy.exc import IntegrityError
 from werkzeug import exceptions
-from flask_jwt_extended import current_user, jwt_required, create_access_token
+from flask_jwt_extended import current_user, jwt_required, create_access_token, get_jwt, get_jwt_identity
 from flask_mail import Message
 from random import randint
 import datetime
@@ -33,42 +33,21 @@ def check_email():
 	pass
 
 
-# @bp.route('/register',methods=[HTTPMethod.POST.value])
-# def signup():
-# 	rdata = request.get_json()
-# 	name, email = rdata[UserScema.NAME.value], rdata[UserScema.EMAIL.value]
-# 	user = User(name=name,email=email)
-# 	db.session.add(user)
-# 	try:
-# 		db.session.commit()
-# 	except IntegrityError:
-# 		db.session.rollback()
-# 		raise exceptions.BadRequest(ErrorMessage.EXISTS.value)
-# 	# verify the email via otp
-# 	return jsonify(token=create_access_token(identity=user))
-
-
-
-
 @bp.route('/getOTP',methods=[HTTPMethod.POST.value])
 def get_otp():
 	rdata = request.get_json()
 	email = rdata[UserScema.EMAIL.value]
 	user = User.query.filter_by(email=email).one_or_none()
-	if user is not None:
-		otp = send_otp(to_address=email)
-		encrypted_otp = cipher.encrypt(otp.encode('utf-8'))
-		return jsonify(token=create_access_token(identity=user.email, 
-												expires_delta=datetime.timedelta(minutes=OTP_EXPIRY),
-												additional_claims={'otp':encrypted_otp,'sub':user.name}))
 
-	name = rdata[UserScema.NAME.value]
-	User(name=name,email=email) # to validate user
+	if user is None:
+		name = rdata[UserScema.NAME.value]
+		user = User(name=name,email=email) # validates user
+
 	otp = send_otp(to_address=email)
-	encrypted_otp = cipher.encrypt(otp.encode('utf-8'))
+	encrypted_otp = (cipher.encrypt(otp.encode('utf-8'))).decode('utf-8')
 	return jsonify(token=create_access_token(identity=user.email, 
 											expires_delta=datetime.timedelta(minutes=15),
-											additional_claims={'otp':encrypted_otp,'sub':user.name}))
+											additional_claims={'otp':encrypted_otp,'usr':user.name}))
 
 
 
@@ -80,7 +59,7 @@ def login():
 	original_otp = (cipher.decrypt(encrypted_otp)).decode('utf-8')
 
 	if original_otp == requested_otp:
-		email, name = get_jwt_identity(), claims['sub']
+		email, name = get_jwt_identity(), claims['usr']
 		user = User(email=email,name=name)
 		db.session.add(user)
 		try:

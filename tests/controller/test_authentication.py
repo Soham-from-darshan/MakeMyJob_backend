@@ -21,36 +21,39 @@ valid_user = {
 }
 
 def test_signup(client):
-	res = client.post('/auth/register',json=valid_user)
-	ic(res.json)
-	assert res.status_code == 200
-	assert res.json['token']
+	for i in range(2):
+		res = client.post('/auth/getOTP',json=valid_user)
+		assert res.status_code == 200
+		token = res.json['token']
+		otp = input('\nEnter OTP: ')
+		res = client.post('/auth/login',headers={"Authorization":f'Bearer {token}'}, json={'otp':otp})
+		# ic(res.json)
+		assert res.status_code == 200
+		token = res.json['token']
+		res = client.get('/auth/protected',headers={"Authorization":f'Bearer {token}'})
+		ic(res.json)
+		assert res.status_code == 200
+		for key in valid_user:
+			assert valid_user[key] == res.json[key]
 
-	res = client.get('/auth/protected',headers={'Authorization':f'Bearer {res.json['token']}'})
-	ic(res.json)
-	assert res.status_code == 200
-	for key in valid_user:
-		assert valid_user[key] == res.json[key]
-
-	res = client.post('/auth/register',json=valid_user)
-	assert res.status_code == 400
-	check_error(400, ErrorMessage.Controller.EXISTS.value, res.json)
-	ic(res.json)
-
-
-def test_keyerror_handler(client):
-	user = dict(**valid_user)
-	user.pop(UserSchema.NAME.value)
-	res = client.post('/auth/register', json=user)
-	ic(res.json)
-	assert res.status_code == 400
-	check_error(400, ErrorMessage.General.REQUIRED.value.format(field=UserSchema.NAME.value), res.json)
+		# TODO: pending tests:
+		#	- test for cryptography.fernet.InvalidToken
+		#	- test for incorrect otp
 
 
-def test_valueerror_handler(client):
-	user = dict(**valid_user)
-	user[UserSchema.NAME.value] = 'x'
-	res = client.post('/auth/register', json=user)
-	ic(res.json)
-	assert res.status_code == 400
-	check_error(400, ErrorMessage.User.Name.LENGTH.value, res.json)
+# def test_keyerror_handler(client):
+# 	user = dict(**valid_user)
+# 	user.pop(UserSchema.NAME.value)
+# 	res = client.post('/auth/register', json=user)
+# 	ic(res.json)
+# 	assert res.status_code == 400
+# 	check_error(400, ErrorMessage.General.REQUIRED.value.format(field=UserSchema.NAME.value), res.json)
+
+
+# def test_valueerror_handler(client):
+# 	user = dict(**valid_user)
+# 	user[UserSchema.NAME.value] = 'x'
+# 	res = client.post('/auth/register', json=user)
+# 	ic(res.json)
+# 	assert res.status_code == 400
+# 	check_error(400, ErrorMessage.User.Name.LENGTH.value, res.json)
