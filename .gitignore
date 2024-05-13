@@ -23,3 +23,5 @@ temp_*
 .vscode
 *.db
 *.sqlite
+
+email_cred.json

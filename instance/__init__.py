@@ -1,5 +1,9 @@
 from datetime import timedelta
 import string
+import json
+
+with open('./instance/email_cred.json','r') as f:
+    email_creds = json.load(f)
 
 class FlaskDefaultConfiguration:
     DEBUG = False
@@ -28,9 +32,19 @@ class FlaskDefaultConfiguration:
 
 class DefaultConfiguration(FlaskDefaultConfiguration):
     SECRET_KEY = 'keep it secret'                           # type: ignore
+
     MIN_USERNAME_LENGTH = 2
     MAX_USERNAME_LENGTH = 20
     USERNAME_CAN_CONTAIN = string.ascii_letters + " "
+    OTP_EXPIRY_IN_MINUTES = 1
+
+    MAIL_USERNAME = email_creds['address']
+    MAIL_DEFAULT_SENDER = email_creds['address']
+    MAIL_PASSWORD = email_creds['password']
+    MAIL_SERVER = 'smtp.gmail.com'
+    MAIL_PORT = 587
+    MAIL_USE_TLS = True
+    MAIL_USE_SSL = False
     
 class DevelopmentConfiguration(DefaultConfiguration):
     DEBUG = True

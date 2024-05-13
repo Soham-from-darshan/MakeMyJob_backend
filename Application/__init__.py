@@ -6,6 +6,9 @@ from typing import cast
 from enum import StrEnum
 from instance import DefaultConfiguration as dcfg
 from flask_jwt_extended import JWTManager
+from flask_mail import Mail
+from cryptography.fernet import Fernet
+from base64 import b64encode
 
 
 class Base(MappedAsDataclass, DeclarativeBase):
@@ -17,9 +20,12 @@ class Base(MappedAsDataclass, DeclarativeBase):
             result[col_name] = getattr(self, col_name)
         # return json.dumps(result, default=str) # for stringification
         return result
+
     
 db: SQLAlchemy = SQLAlchemy(model_class=Base)
 jwt = JWTManager()
+mail = Mail()
+cipher = None
 
 
 def create_app(*,configClass: type) -> Flask:
@@ -39,8 +45,14 @@ def create_app(*,configClass: type) -> Flask:
     app.register_error_handler(ValueError, errhndl.handle_value_error)
     app.register_error_handler(KeyError, errhndl.handle_key_error)
 
+    mail.init_app(app)
     jwt.init_app(app)
     db.init_app(app)
+    global cipher
+    key = Fernet.generate_key()
+    cipher = Fernet(key)
+
+
     import Application.models as models
     with app.app_context():
         db.create_all()    
@@ -114,3 +126,5 @@ class EnumStore:
             """Error Messages by controllers
             """
             EXISTS = 'User is already present in database'
+            NOT_FOUND = 'User not found in database'
+            INVALID_OTP = 'The given OTP is invalid'
