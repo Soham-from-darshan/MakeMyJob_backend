@@ -41,9 +41,12 @@ valid_user = {
 		# TODO: pending tests:
 		#	- test for cryptography.fernet.InvalidToken
 		#	- test for incorrect otp
-		#	- checking what happens if token is modified
+		#	- checking what happens if token is modified = jwt-extended will emmit Signature verification error
 		#	- creating a custom "otp_required" decorator
 		# 	- properly studying flask jwt extended
+		#	- customize errors from jwt extended i.e. creating decorator that will raise bad request when jwt-extended gives error
+		# 	- removing utf-8 argument while encoding/decoding since its an autometic process
+		# 	- taking a closer loot at how signature verification works in jwt-extended
 
 
 # def test_keyerror_handler(client):
@@ -69,16 +72,20 @@ def test_play_with_token(client):
 	res = client.post('/auth/getOTP',json=valid_user)
 	token = res.json['token']
 
+	# payload_dict = decode_token(token)
+	# ic(payload_dict)
+	# modified_payload = modify_payload(payload_dict)
+	# ic(modified_payload)
+	# token = encode_token(token.split('.')[0], json.dumps(modified_payload), token.split('.')[-1])
+
+
 	otp = input('\nEnter OTP: ')
 	res = client.post('/auth/login',headers={"Authorization":f'Bearer {token}'}, json=dict(otp=otp))
+	# ic(res.json, res.status_code)
 	token = res.json['token']
-
-	payload_dict = decode_token(token)
-	ic(payload_dict)
-	modified_payload = modify_payload(payload_dict)
-	ic(modified_payload)
-	token = encode_token(token.split('.')[0], json.dumps(modified_payload), token.split('.')[-1])
-
+	ic(token)
+	token = input('\nEnter New Token: ')
+	
 	res = client.get('/auth/protected',headers={"Authorization":f'Bearer {token}'})
 	ic(res.json)
 
@@ -97,5 +104,5 @@ def encode_token(header, payload, signature):
 
 
 def modify_payload(payload):
-	payload['sub'] = 2
+	payload['otp'] = 'X' + payload['otp'][1:]
 	return payload
