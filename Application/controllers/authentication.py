@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 from Application import EnumStore, db, jwt, mail, cipher
 from Application.models import User
 from sqlalchemy.exc import IntegrityError
@@ -55,7 +55,7 @@ def get_otp():
 @jwt_required()
 def login():
 	claims, rdata = get_jwt(), request.get_json()
-	requested_otp, encrypted_otp = rdata['otp'], claims['otp']
+	requested_otp, encrypted_otp = str(rdata['otp']), claims['otp']
 	original_otp = (cipher.decrypt(encrypted_otp)).decode('utf-8')
 
 	if original_otp == requested_otp:
@@ -94,7 +94,7 @@ def protected_route():
 
 def send_otp(*,to_address):
 	otp = ''.join([str(randint(0,9)) for _ in range(4)])
-	msg = Message("OTP Verification from MakeMyJob", recipients=[to_address])
+	msg = Message(f"{otp}", recipients=[to_address])
 	msg.body = f"Your OTP for MakeMyJob account is {otp}. Don't share this to anyone"
 	mail.send(msg)
 	return otp

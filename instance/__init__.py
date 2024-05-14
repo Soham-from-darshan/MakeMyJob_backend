@@ -30,6 +30,7 @@ class FlaskDefaultConfiguration:
     EXPLAIN_TEMPLATE_LOADING = False
     MAX_COOKIE_SIZE = 4093
 
+
 class DefaultConfiguration(FlaskDefaultConfiguration):
     SECRET_KEY = 'keep it secret'                           # type: ignore
 
@@ -45,11 +46,15 @@ class DefaultConfiguration(FlaskDefaultConfiguration):
     MAIL_PORT = 587
     MAIL_USE_TLS = True
     MAIL_USE_SSL = False
-    
+
+    JWT_ERROR_MESSAGE_KEY = 'description'
+
+
 class DevelopmentConfiguration(DefaultConfiguration):
     DEBUG = True
     SQLALCHEMY_DATABASE_URI = 'sqlite:///debug.db'
     SQLALCHEMY_ECHO=True
+
 
 class TestingConfiguration(DefaultConfiguration):
     TESTING = True
@@ -57,6 +62,7 @@ class TestingConfiguration(DefaultConfiguration):
     # SQLALCHEMY_DATABASE_URI = 'sqlite:///test.db'
     # SQLALCHEMY_ECHO=True
     MAIL_SUPPRESS_SEND = False
+
 
 class DeploymentConfiguration(DefaultConfiguration):
     SQLALCHEMY_DATABASE_URI = 'sqlite:///production.db'
