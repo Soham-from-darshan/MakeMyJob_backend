@@ -44,9 +44,9 @@ def get_otp():
 		user = User(name=name,email=email) # validates user
 
 	otp = send_otp(to_address=email)
-	encrypted_otp = (cipher.encrypt(otp.encode('utf-8'))).decode('utf-8')
+	encrypted_otp = (cipher.encrypt(otp.encode())).decode()
 	return jsonify(token=create_access_token(identity=user.email, 
-											expires_delta=datetime.timedelta(minutes=15),
+											expires_delta=datetime.timedelta(minutes=OTP_EXPIRY),
 											additional_claims={'otp':encrypted_otp,'usr':user.name}))
 
 
@@ -56,7 +56,7 @@ def get_otp():
 def login():
 	claims, rdata = get_jwt(), request.get_json()
 	requested_otp, encrypted_otp = str(rdata['otp']), claims['otp']
-	original_otp = (cipher.decrypt(encrypted_otp)).decode('utf-8')
+	original_otp = (cipher.decrypt(encrypted_otp)).decode()
 
 	if original_otp == requested_otp:
 		email, name = get_jwt_identity(), claims['usr']
@@ -67,7 +67,7 @@ def login():
 		except IntegrityError: # if user already exists
 			db.session.rollback()
 		finally:			
-			return jsonify(token=create_access_token(identity=user.id))
+			return jsonify(token=create_access_token(identity=user.id,expires_delta=False))
 
 	raise exceptions.BadRequest(ErrorMessage.INVALID_OTP.value)  
 
@@ -85,11 +85,9 @@ def delete_inactive_accounts():
 @jwt_required()
 def protected_route():
 	id = get_jwt_identity()
-	user = User.query.get(id)
-	if user is not None:
-		return user.serialize()
-	return exceptions.BadRequest(ErrorMessage.NOT_FOUND.value)
-
+	user = db.get_or_404(User, id)
+	return user.serialize()
+	
 
 
 def send_otp(*,to_address):

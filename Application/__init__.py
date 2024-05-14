@@ -126,5 +126,5 @@ class EnumStore:
             """Error Messages by controllers
             """
             EXISTS = 'User is already present in database'
-            NOT_FOUND = 'User not found in database'
+            # NOT_FOUND = 'User not found in database'
             INVALID_OTP = 'The given OTP is invalid'
