@@ -63,6 +63,8 @@ class TestingConfiguration(DefaultConfiguration):
     # SQLALCHEMY_ECHO=True
     MAIL_SUPPRESS_SEND = False
 
+    OTP_EXPIRY_IN_MINUTES = 1/6
+
 
 class DeploymentConfiguration(DefaultConfiguration):
     SQLALCHEMY_DATABASE_URI = 'sqlite:///production.db'

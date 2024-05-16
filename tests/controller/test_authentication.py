@@ -22,7 +22,9 @@ valid_user = {
 	UserSchema.EMAIL.value : valid_email
 }
 
-def authorization(client, details):
+# use `pytest -vv -s -rA` , the -s flag will allow user input in stdin
+
+def test_signup(client, details):
 	res = client.post('/auth/getOTP',json=details)
 	ic(res.json)
 	assert res.status_code == 200
@@ -42,10 +44,6 @@ def authorization(client, details):
 		assert valid_user[key] == res.json[key]
 
 
-def test_signup(client):
-	authorization(client, valid_user)
-
-
 def test_signup_with_invalid_otp(client):
 	res = client.post('/auth/getOTP',json=valid_user)
 	ic(res.json)
@@ -60,13 +58,16 @@ def test_signup_with_invalid_otp(client):
 	check_error(400, ErrorMessage.Controller.INVALID_OTP.value, res.json)
 
 
+def test_expired_otp(client):
+	pass
 
 
 # TODO: pending tests:
 #	- test for cryptography.fernet.InvalidToken = If token is modified then it will be detected and error will emmited by jwt-extended
 #	- test for incorrect otp = done
 #	- checking what happens if token is modified = jwt-extended will emmit Signature verification error
-#	- creating a custom "otp_required" decorator
+#	- creating a custom "otp_required" decorator = not needed if jwt-extended detectes that there is key missing for a claim
+#	- updating last active at field for user in each request : maybe we can create "user_required" decorator which will handle this for us
 # 	- properly studying flask jwt extended = got the basic idea
 #	- customize errors from jwt extended i.e. creating decorator that will raise bad request when jwt-extended gives error = not required currently because its ok until jwt-extended sends 4** errors on its own that all we need right now
 # 	- removing utf-8 argument while encoding/decoding since its an autometic process = done

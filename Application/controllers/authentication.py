@@ -3,11 +3,12 @@ from Application import EnumStore, db, jwt, mail, cipher
 from Application.models import User
 from sqlalchemy.exc import IntegrityError
 from werkzeug import exceptions
-from flask_jwt_extended import current_user, jwt_required, create_access_token, get_jwt, get_jwt_identity
+from flask_jwt_extended import current_user, jwt_required, create_access_token, get_jwt, get_jwt_identity, verify_jwt_in_request
 from flask_mail import Message
 from random import randint
 import datetime
 from instance import DefaultConfiguration
+import functools
 
 
 bp = Blueprint('Auth',__name__, url_prefix='/auth')
@@ -22,15 +23,29 @@ def login_required():
 	# update last active at
 	pass
 
-def get_user_data():
-	pass
+# def get_user_data():
+# 	pass
 
-def check_data_consistancy():
-	# check if user data is same as data in server
-	pass
+# def check_data_consistancy():
+# 	# check if user data is same as data in server
+# 	pass
 
-def check_email():
-	pass
+
+def otp_required():
+    def wrapper(fn):
+        @functools.wraps(fn)
+        def decorator(*args, **kwargs):
+            verify_jwt_in_request()
+            claims = get_jwt()
+            
+         	# if this is not present then key error will be raised by python and handled by error handlers
+        	claims['otp']
+        	claims['usr']
+        	claims['sub']
+
+        return decorator
+
+    return wrapper
 
 
 @bp.route('/getOTP',methods=[HTTPMethod.POST.value])
@@ -52,7 +67,7 @@ def get_otp():
 
 
 @bp.route('/login',methods=[HTTPMethod.POST.value])
-@jwt_required()
+@otp_required
 def login():
 	claims, rdata = get_jwt(), request.get_json()
 	requested_otp, encrypted_otp = str(rdata['otp']), claims['otp']
@@ -73,12 +88,12 @@ def login():
 
 
 
-def delete_account():
-	pass
+# def delete_account():
+# 	pass
 
-# background job
-def delete_inactive_accounts():
-	pass
+# # background job
+# def delete_inactive_accounts():
+# 	pass
 
 
 @bp.route('/protected')
