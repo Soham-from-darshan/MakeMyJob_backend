@@ -4,12 +4,13 @@ from sqlalchemy.orm import MappedAsDataclass, DeclarativeBase
 from werkzeug import exceptions
 from typing import cast
 from enum import StrEnum
-from instance import DefaultConfiguration as dcfg
 from flask_jwt_extended import JWTManager
 from flask_mail import Mail
 from cryptography.fernet import Fernet
 from base64 import b64encode
+from instance import DefaultConfiguration
 
+CurrentConfiguration = DefaultConfiguration
 
 class Base(MappedAsDataclass, DeclarativeBase):
     def serialize(self) -> dict:
@@ -40,6 +41,9 @@ def create_app(*,configClass: type) -> Flask:
     app = Flask(__name__, instance_relative_config=True)
     app.config.from_object(configClass())
     
+    global CurrentConfiguration
+    CurrentConfiguration = configClass
+
     import Application.errorhandlers as errhndl
     app.register_error_handler(exceptions.HTTPException, errhndl.jsonify_default_errors)
     app.register_error_handler(ValueError, errhndl.handle_value_error)
@@ -113,8 +117,8 @@ class EnumStore:
         
         class User:
             class Name(StrEnum):
-                LENGTH = 'The length of name can be between {min} to {max} characters'.format(min=dcfg.MIN_USERNAME_LENGTH,max=dcfg.MAX_USERNAME_LENGTH)
-                CONTAIN = 'The username can only contain "{contain}"'.format(contain=dcfg.USERNAME_CAN_CONTAIN)
+                LENGTH = 'The length of name can be between {min} to {max} characters'.format(min=CurrentConfiguration.MIN_USERNAME_LENGTH,max=CurrentConfiguration.MAX_USERNAME_LENGTH)
+                CONTAIN = 'The username can only contain "{contain}"'.format(contain=CurrentConfiguration.USERNAME_CAN_CONTAIN)
             
             class CreatedAt(StrEnum):
                 CONSTANT = 'The field is constant'

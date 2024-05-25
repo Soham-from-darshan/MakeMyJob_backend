@@ -63,7 +63,7 @@ class TestingConfiguration(DefaultConfiguration):
     # SQLALCHEMY_ECHO=True
     MAIL_SUPPRESS_SEND = False
 
-    OTP_EXPIRY_IN_MINUTES = 1/6
+    OTP_EXPIRY_IN_MINUTES = 2/6
 
 
 class DeploymentConfiguration(DefaultConfiguration):

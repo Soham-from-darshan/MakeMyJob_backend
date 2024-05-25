@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify, current_app
-from Application import EnumStore, db, jwt, mail, cipher
+from Application import EnumStore, db, jwt, mail, cipher, CurrentConfiguration
 from Application.models import User
 from sqlalchemy.exc import IntegrityError
 from werkzeug import exceptions
@@ -7,7 +7,6 @@ from flask_jwt_extended import current_user, jwt_required, create_access_token, 
 from flask_mail import Message
 from random import randint
 import datetime
-from instance import DefaultConfiguration
 import functools
 
 
@@ -16,7 +15,7 @@ bp = Blueprint('Auth',__name__, url_prefix='/auth')
 HTTPMethod = EnumStore.HTTPMethod
 UserScema = EnumStore.JSONSchema.User
 ErrorMessage = EnumStore.ErrorMessage.Controller
-OTP_EXPIRY = DefaultConfiguration.OTP_EXPIRY_IN_MINUTES
+OTP_EXPIRY = CurrentConfiguration.OTP_EXPIRY_IN_MINUTES
 
 
 def login_required():
@@ -31,21 +30,21 @@ def login_required():
 # 	pass
 
 
-def otp_required():
-    def wrapper(fn):
-        @functools.wraps(fn)
-        def decorator(*args, **kwargs):
-            verify_jwt_in_request()
-            claims = get_jwt()
-            
-         	# if this is not present then key error will be raised by python and handled by error handlers
-        	claims['otp']
-        	claims['usr']
-        	claims['sub']
-
-        return decorator
-
-    return wrapper
+# def otp_required():
+#     def wrapper(fn):
+#         @functools.wraps(fn)
+#         def decorator(*args, **kwargs):
+#             verify_jwt_in_request()
+#             claims = get_jwt()
+#             
+#          	# if this is not present then key error will be raised by python and handled by error handlers
+#         	claims['otp']
+#         	claims['usr']
+#         	claims['sub']
+#
+#         return decorator
+#
+#     return wrapper
 
 
 @bp.route('/getOTP',methods=[HTTPMethod.POST.value])
@@ -67,7 +66,7 @@ def get_otp():
 
 
 @bp.route('/login',methods=[HTTPMethod.POST.value])
-@otp_required
+@jwt_required()
 def login():
 	claims, rdata = get_jwt(), request.get_json()
 	requested_otp, encrypted_otp = str(rdata['otp']), claims['otp']

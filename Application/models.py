@@ -1,8 +1,7 @@
-from Application import db, EnumStore
+from Application import db, EnumStore, CurrentConfiguration as cfg
 from sqlalchemy.orm import Mapped, mapped_column, validates
 import datetime
 from email_validator import validate_email, EmailNotValidError
-from instance import DefaultConfiguration as dcfg
 
 # from icecream import ic # type: ignore
 
@@ -23,11 +22,11 @@ class User(db.Model): # type: ignore
     
     def nameValidator(self, key: str, value: str) -> str:
         value = value.strip()
-        if  len(value) < dcfg.MIN_USERNAME_LENGTH or \
-            len(value) > dcfg.MAX_USERNAME_LENGTH:
+        if  len(value) < cfg.MIN_USERNAME_LENGTH or \
+            len(value) > cfg.MAX_USERNAME_LENGTH:
                 raise ValueError(UserError.Name.LENGTH.value)
         for char in value:
-            if char not in dcfg.USERNAME_CAN_CONTAIN:
+            if char not in cfg.USERNAME_CAN_CONTAIN:
                 raise ValueError(UserError.Name.CONTAIN.value)
         return value
     
