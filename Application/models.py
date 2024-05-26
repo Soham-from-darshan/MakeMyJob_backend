@@ -33,7 +33,7 @@ class User(db.Model): # type: ignore
     
     def emailValidator(self, key: str, value: str) -> str:
         try:
-            email_info = validate_email(value,check_deliverability=False)
+            email_info = validate_email(value,check_deliverability=True)
         except EmailNotValidError as err:
             raise ValueError(str(err))
         else:

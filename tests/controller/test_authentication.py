@@ -1,6 +1,7 @@
 import pytest
 from instance import TestingConfiguration
 from Application import EnumStore
+from Application.models import User
 from werkzeug.http import HTTP_STATUS_CODES as hsc
 from tests.controller import check_error
 from icecream import ic
@@ -27,7 +28,6 @@ valid_user = {
 OTP_EXPIRY = TestingConfiguration.OTP_EXPIRY_IN_MINUTES
 
 # use `pytest -vv -s -rA` , the -s flag will allow user input in stdin
-
 def test_signup(client):
 	res = client.post('/auth/getOTP',json=valid_user)
 	ic(res.json)
@@ -42,7 +42,7 @@ def test_signup(client):
 	token = res.json['token']
 
 	res = ic(client.get('/auth/protected',headers={"Authorization":f'Bearer {token}'}))
-	ic(res.json, str(res))
+	ic(res.json)
 	assert res.status_code == 200
 	for key in valid_user:
 		assert valid_user[key] == res.json[key]
@@ -68,15 +68,39 @@ def test_expired_otp(client):
     assert res.status_code == 200
     token = res.json['token']
     ic(token)
-    otp = input("\nEnter the invalid OTP: ")
+    otp = input("\nEnter the OTP: ")
     sleep(OTP_EXPIRY * 60)
     res = client.post('/auth/login',headers={"Authorization":f'Bearer {token}'}, json={'otp':otp})
     ic(res.json,res.status_code)
     res.json[ErrorSchema.DESCRIPTION] = 'Token has expired'
 
+
+def test_login(client): 
+    res = client.post('/auth/getOTP',json=valid_user)
+    token = res.json['token']
+    otp = input("\nEnter the OTP: ")
+    res = client.post('/auth/login',headers={"Authorization":f'Bearer {token}'}, json={'otp':otp})
+    
+    res = client.post('/auth/getOTP',json={UserSchema.EMAIL.value:valid_email})
+    ic(res.json)
+    assert res.status_code == 200
+    token = res.json['token']
+    
+    otp = input("\nEnter OTP to login: ")
+    res = client.post('/auth/login', headers={'Authorization':f'Bearer {token}'}, json={'otp':otp})
+    ic(res.json)
+    assert res.status_code == 200
+    token = res.json['token']
+
+    res = ic(client.get('/auth/protected',headers={"Authorization":f'Bearer {token}'}))
+    ic(res.json)
+    assert res.status_code == 200
+    for key in valid_user:
+        assert valid_user[key] == res.json[key]
+
 # TODO: pending tests:
-#	- updating last active at field for user in each request : maybe we can create "user_required" decorator which will handle this for us
-#	- customize errors from jwt extended i.e. creating decorator that will raise bad request when jwt-extended gives error = not required currently because its ok until jwt-extended sends 4** errors on its own that all we need right now
+#   - adding coverage support
+#   - testing the login_required function with full converage is not done
 
 
 # def test_keyerror_handler(client):
