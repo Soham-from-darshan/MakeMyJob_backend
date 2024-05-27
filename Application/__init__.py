@@ -62,7 +62,9 @@ def create_app(*,configClass: type) -> Flask:
         db.create_all()    
 
     import Application.controllers.authentication as auth
+    import Application.controllers.account as acc
     app.register_blueprint(auth.bp)
+    app.register_blueprint(acc.bp)
     
     @app.route('/')
     def home():

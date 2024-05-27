@@ -2,8 +2,10 @@ from datetime import timedelta
 import string
 import json
 
+
 with open('./instance/email_cred.json','r') as f:
     email_creds = json.load(f)
+    
 
 class FlaskDefaultConfiguration:
     DEBUG = False
@@ -49,6 +51,9 @@ class DefaultConfiguration(FlaskDefaultConfiguration):
 
     JWT_ERROR_MESSAGE_KEY = 'description'
 
+    SEND_OTP = 'send_otp'
+
+
 
 class DevelopmentConfiguration(DefaultConfiguration):
     DEBUG = True
@@ -61,10 +66,13 @@ class TestingConfiguration(DefaultConfiguration):
     SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
     # SQLALCHEMY_DATABASE_URI = 'sqlite:///test.db'
     # SQLALCHEMY_ECHO=True
-    MAIL_SUPPRESS_SEND = False
 
-    OTP_EXPIRY_IN_MINUTES = 2/6
+    OTP_EXPIRY_IN_MINUTES = .1/6
 
+    SEND_OTP = 'send_otp_for_test'
+    
 
 class DeploymentConfiguration(DefaultConfiguration):
     SQLALCHEMY_DATABASE_URI = 'sqlite:///production.db'
+
+
