@@ -44,16 +44,18 @@ def get_otp():
     rdata = request.get_json()
     email = rdata[UserScema.EMAIL.value]
     user = User.query.filter_by(email=email).one_or_none()
-    otp = send_otp(to_address=email)
-    encrypted_otp = (cipher.encrypt(otp.encode())).decode()
-
+    
     if user is not None:
+        otp = send_otp(to_address=email)
+        encrypted_otp = (cipher.encrypt(otp.encode())).decode()
         return jsonify(token=create_access_token(identity=user.id, expires_delta=datetime.timedelta(minutes=OTP_EXPIRY), additional_claims={'otp':encrypted_otp})) 
 
                        
     name = rdata[UserScema.NAME.value]
     user = User(name=name,email=email) # validates new user
 
+    otp = send_otp(to_address=email)
+    encrypted_otp = (cipher.encrypt(otp.encode())).decode()
     return jsonify(token=create_access_token(identity=user.email, expires_delta=datetime.timedelta(minutes=OTP_EXPIRY), additional_claims={'otp':encrypted_otp,'usr':user.name}))
 
 
