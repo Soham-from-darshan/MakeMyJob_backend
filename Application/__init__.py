@@ -102,8 +102,6 @@ class EnumStore:
         """Collection of enums which represents json schema for api. 
         """
         class Error(StrEnum):
-            NAME = 'name'
-            CODE = 'code'
             DESCRIPTION = 'description'
         
         class User(StrEnum):
@@ -127,6 +125,9 @@ class EnumStore:
             
             class LastActiveAt(StrEnum):
                 CONFLICT = 'The last date activity is conflicting'
+
+            class Email(StrEnum):
+                EXISTS = 'The email address for {address} does not exists'
 
         class Controller(StrEnum):
             """Error Messages by controllers

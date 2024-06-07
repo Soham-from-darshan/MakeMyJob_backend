@@ -1,5 +1,4 @@
 from Application import EnumStore
-from werkzeug.http import HTTP_STATUS_CODES as hsc
 
 ErrorSchema = EnumStore.JSONSchema.Error
 UserSchema = EnumStore.JSONSchema.User
@@ -12,9 +11,7 @@ valid_user = {
 	UserSchema.EMAIL.value : valid_email
 }
 
-def check_error(code: int, msg: str, res: dict):
-	assert res[ErrorSchema.CODE.value] == code
-	assert res[ErrorSchema.NAME.value] == hsc[code]
+def check_error(msg: str, res: dict):
 	assert res[ErrorSchema.DESCRIPTION.value] == msg
 
 

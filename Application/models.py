@@ -1,7 +1,7 @@
 from Application import db, EnumStore, CurrentConfiguration as cfg
 from sqlalchemy.orm import Mapped, mapped_column, validates
 import datetime
-from email_validator import validate_email, EmailNotValidError
+from email_validator import validate_email, EmailNotValidError, EmailUndeliverableError
 
 # from icecream import ic # type: ignore
 
@@ -34,7 +34,7 @@ class User(db.Model): # type: ignore
     def emailValidator(self, key: str, value: str) -> str:
         try:
             email_info = validate_email(value,check_deliverability=True)
-        except EmailNotValidError as err:
+        except (EmailNotValidError, EmailUndeliverableError) as err:
             raise ValueError(str(err))
         else:
             return email_info.normalized

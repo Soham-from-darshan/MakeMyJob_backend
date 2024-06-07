@@ -39,7 +39,16 @@ def test_signup_with_invalid_otp(client):
 	res = client.post('/auth/login',headers={"Authorization":f'Bearer {token}'}, json={'otp':'1111'})
 	ic(res.json)
 	assert res.status_code == 400
-	check_error(400, ErrorMessage.Controller.INVALID_OTP.value, res.json)
+	check_error(ErrorMessage.Controller.INVALID_OTP.value, res.json)
+
+
+@pytest.mark.skip(reason="I could't find way to check if the given email account exits")
+def test_signup_with_nonexisting_email(client):
+    nonexisting_email = 'hatimarchant77@gmail.com'
+    res = client.post('/auth/getOTP', json={UserSchema.NAME.value:'hatim', UserSchema.EMAIL.value:nonexisting_email})
+    ic(res.json)
+    assert res.status_code == 400
+    check_error(ErrorMessage.User.Email.EXISTS.value(format=nonexisting_email))
 
 
 def test_expired_otp(client): 
