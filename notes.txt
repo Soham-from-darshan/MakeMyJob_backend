@@ -1,5 +1,1 @@
-- adding coverage support
-- testing the login_required function with full converage is not done
-- tests for error handlers are not written
-- test for delete_inactive_accounts is not written
 - optimizing the db queries emmited by sqlalchemy if possible
