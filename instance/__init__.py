@@ -34,7 +34,7 @@ class FlaskDefaultConfiguration:
 
 
 class DefaultConfiguration(FlaskDefaultConfiguration):
-    SECRET_KEY = 'keep it secret'                           # type: ignore
+    SECRET_KEY = 'fake secret'                           # type: ignore
 
     MIN_USERNAME_LENGTH = 2
     MAX_USERNAME_LENGTH = 20
