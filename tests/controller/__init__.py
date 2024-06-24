@@ -1,18 +1,13 @@
-from Application import EnumStore
-
-ErrorSchema = EnumStore.JSONSchema.Error
-UserSchema = EnumStore.JSONSchema.User
-
 valid_name = 'Soham Jobanputra'
 valid_email = 'sohamjobanputra7@gmail.com'
 
 valid_user = {
-	UserSchema.NAME.value : valid_name,
-	UserSchema.EMAIL.value : valid_email
+	'name' : valid_name,
+	'email' : valid_email
 }
 
 def check_error(msg: str, res: dict):
-	assert res[ErrorSchema.DESCRIPTION.value] == msg
+	assert res['description'] == msg
 
 
 def signup(client): 

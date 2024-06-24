@@ -4,8 +4,6 @@ import pytest
 
 
 class TestApplicationFactory:
-    """A class to test Apllication Factory (create_app function)"""
-    
     configClasses = [DeploymentConfiguration, DevelopmentConfiguration, TestingConfiguration]
 
     @staticmethod

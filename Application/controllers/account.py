@@ -1,8 +1,9 @@
-from flask import Blueprint, jsonify
+from flask import Blueprint, current_app
 from Application.controllers.authentication import login_required
 from flask_jwt_extended import get_jwt_identity
 from Application import db
 from Application.models import User
+import datetime
 
 
 bp = Blueprint('Account',__name__,url_prefix='/account')
@@ -19,8 +20,4 @@ def get_user():
 def delete_user():
     User.query.filter_by(id=get_jwt_identity()).delete()
     db.session.commit()
-    return jsonify(f'User has been deleted'), 200
-
-
-def delete_inactive_accounts():
-    pass
+    return dict(description='user has been deleted'), 200

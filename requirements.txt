@@ -1,3 +1,4 @@
+APScheduler==3.10.4
 asttokens==2.4.1
 blinker==1.7.0
 certifi==2024.2.2
@@ -29,9 +30,11 @@ pycparser==2.22
 Pygments==2.17.2
 PyJWT==2.8.0
 pytest==8.1.1
+pytz==2024.1
 requests==2.32.2
 six==1.16.0
 SQLAlchemy==2.0.29
 typing_extensions==4.11.0
+tzlocal==5.2
 urllib3==2.2.1
 Werkzeug==3.0.2

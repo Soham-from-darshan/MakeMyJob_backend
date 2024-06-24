@@ -1,1 +1,2 @@
 - optimizing the db queries emmited by sqlalchemy if possible
+- adding logging for critical events like user creation and deletion

@@ -1,7 +1,7 @@
 from datetime import timedelta
 import string
 import json
-
+from cryptography.fernet import Fernet
 
 with open('./instance/email_cred.json','r') as f:
     email_creds = json.load(f)
@@ -39,7 +39,10 @@ class DefaultConfiguration(FlaskDefaultConfiguration):
     MIN_USERNAME_LENGTH = 2
     MAX_USERNAME_LENGTH = 20
     USERNAME_CAN_CONTAIN = string.ascii_letters + " "
-    OTP_EXPIRY_IN_MINUTES = 10
+    OTP_EXPIRY_IN_MINUTES = 10.0
+    ENABLE_SCHEDULER = True
+    INACTIVE_ACCOUNT_DELETION_INTERVAL_IN_HOURS = 1.0
+    ACCEPTABLE_INACTIVITY_IN_YEARS = 1
 
     MAIL_USERNAME = email_creds['address']
     MAIL_DEFAULT_SENDER = email_creds['address']
@@ -52,6 +55,7 @@ class DefaultConfiguration(FlaskDefaultConfiguration):
     JWT_ERROR_MESSAGE_KEY = 'description'
 
     SEND_OTP = 'send_otp'
+    CIPHER = Fernet(Fernet.generate_key())
 
 
 
@@ -63,13 +67,15 @@ class DevelopmentConfiguration(DefaultConfiguration):
 
 class TestingConfiguration(DefaultConfiguration):
     TESTING = True
+    PROPAGATE_EXCEPTIONS = False                 # type: ignore
+
     SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
-    # SQLALCHEMY_DATABASE_URI = 'sqlite:///test.db'
-    # SQLALCHEMY_ECHO=True
+    MAIL_SUPPRESS_SEND = True
 
-    OTP_EXPIRY_IN_MINUTES = .1/6
-
+    OTP_EXPIRY_IN_MINUTES = .2/6
     SEND_OTP = 'send_otp_for_test'
+    INACTIVE_ACCOUNT_DELETION_INTERVAL_IN_HOURS = 2/3600
+
     
 
 class DeploymentConfiguration(DefaultConfiguration):

@@ -1,33 +1,32 @@
-from Application import db, EnumStore, CurrentConfiguration as cfg
+from flask import current_app
+from Application import db, ErrorMessage
 from sqlalchemy.orm import Mapped, mapped_column, validates
 import datetime
 from email_validator import validate_email, EmailNotValidError, EmailUndeliverableError
 
-# from icecream import ic # type: ignore
+UserError = ErrorMessage.User
 
-UserField = EnumStore.JSONSchema.User
-UserError = EnumStore.ErrorMessage.User
-GeneralError = EnumStore.ErrorMessage.General
+class ValidationError(Exception):
+    pass
 
 class User(db.Model): # type: ignore
-    """class to serialize, deserialize and validate the user model
-    """
     id: Mapped[int] = mapped_column(primary_key=True, init=False)
     
-    name: Mapped[str] = mapped_column(UserField.NAME, nullable=False)
-    email: Mapped[str] = mapped_column(UserField.EMAIL, unique=True, nullable=False)
-    created_at: Mapped[datetime.datetime] = mapped_column(UserField.CREATEDAT, nullable=False, default=datetime.datetime.now(),init=False)
-    last_active_at: Mapped[datetime.date] = mapped_column(UserField.LASTACTIVEAT, nullable=False, default=datetime.date.today(), init=False) 
+    name: Mapped[str] = mapped_column(nullable=False)
+    email: Mapped[str] = mapped_column(unique=True, nullable=False)
+    created_at: Mapped[datetime.datetime] = mapped_column(nullable=False, default=datetime.datetime.now(),init=False)
+    last_active_at: Mapped[datetime.date] = mapped_column(nullable=False, default=datetime.date.today(), init=False) 
         
     
     def nameValidator(self, key: str, value: str) -> str:
         value = value.strip()
-        if  len(value) < cfg.MIN_USERNAME_LENGTH or \
-            len(value) > cfg.MAX_USERNAME_LENGTH:
-                raise ValueError(UserError.Name.LENGTH.value)
+        minn, maxx, containn = current_app.config['MIN_USERNAME_LENGTH'], current_app.config['MAX_USERNAME_LENGTH'], current_app.config['USERNAME_CAN_CONTAIN']  
+        if  len(value) < minn or \
+            len(value) > maxx:
+                raise ValidationError(UserError.Name.LENGTH.value.format(min=minn, max=maxx))
         for char in value:
-            if char not in cfg.USERNAME_CAN_CONTAIN:
-                raise ValueError(UserError.Name.CONTAIN.value)
+            if char not in containn:
+                raise ValidationError(UserError.Name.CONTAIN.value.format(contain=containn))
         return value
     
     
@@ -35,30 +34,30 @@ class User(db.Model): # type: ignore
         try:
             email_info = validate_email(value,check_deliverability=True)
         except (EmailNotValidError, EmailUndeliverableError) as err:
-            raise ValueError(str(err))
+            raise ValidationError(str(err))
         else:
             return email_info.normalized
     
     
     def createdatValidator(self, key: str, value: datetime.datetime) -> datetime.datetime:
         if self.created_at is not None:
-            raise ValueError(UserError.CreatedAt.CONSTANT.value)
+            raise ValidationError(UserError.CreatedAt.CONSTANT.value)
         return value
     
     
     def lastactiveatValidator(self, key: str, value: datetime.date) -> datetime.date:        
         if self.last_active_at is not None and value < self.last_active_at:
-            raise ValueError(UserError.LastActiveAt.CONFLICT.value)
+            raise ValidationError(UserError.LastActiveAt.CONFLICT.value)
         return value
     
     columnWiseValidator = {
-        UserField.NAME.value : nameValidator,
-        UserField.EMAIL.value : emailValidator,
-        UserField.CREATEDAT.value : createdatValidator,
-        UserField.LASTACTIVEAT.value : lastactiveatValidator
+        'name' : nameValidator,
+        'email' : emailValidator,
+        'created_at' : createdatValidator,
+        'last_active_at' : lastactiveatValidator
     }
     
-    @validates(*UserField)
+    @validates('name', 'email', 'created_at', 'last_active_at')
     def validator(self, key: str, value):
         function = User.columnWiseValidator[key]
         return function(self,key,value) # type: ignore

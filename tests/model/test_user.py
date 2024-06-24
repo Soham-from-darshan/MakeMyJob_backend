@@ -1,23 +1,22 @@
 import pytest
-from tests.model import nameValidationTestCases
-from Application.models import User
-from Application import EnumStore
+from tests.model import nameValidationTestCases, get_model_obj
+from Application.models import User, ValidationError
+from Application import ErrorMessage
 import datetime
 from icecream import ic # type: ignore
 
 # ic.disable()
 
-UserSchema = EnumStore.JSONSchema.User
-UserErrorMessage = EnumStore.ErrorMessage.User
+UserErrorMessage = ErrorMessage.User
 valid_email = 'sohamjobanputra7@gmail.com'
 valid_name = 'Jobanputra Soham'
 
-def testSerialization():
+def testSerialization(app):
     obj = {
-        UserSchema.NAME.value : valid_name,
-        UserSchema.EMAIL.value : valid_email
+        'name' : valid_name,
+        'email' : valid_email
     }
-    user = User(**obj).serialize()
+    user = get_model_obj(ModelClass=User, **obj).serialize()
     ic(user)
     assert type(user) == dict
 
@@ -27,11 +26,12 @@ class TestValidation:
     @pytest.mark.parametrize('name,err',nameValidationTestCases.items())
     def testName(name, err):
         obj = {
-            UserSchema.NAME.value : name,
-            UserSchema.EMAIL.value : valid_email
+            'name' : name,
+            'email' : valid_email
         }
-        with pytest.raises(ValueError) as err_info:
-            User(**obj)
+        with pytest.raises(ValidationError) as err_info:
+            get_model_obj(User, **obj)
+
         ic(str(err_info.value))
         assert str(err_info.value).split(':')[-1].strip() == err
     
@@ -39,21 +39,21 @@ class TestValidation:
     @staticmethod
     def testEmailValidationWorks():
         obj = {
-            UserSchema.NAME.value : valid_name,
-            UserSchema.EMAIL.value : 'bad email@gmail.com'
+            'name' : valid_name,
+            'email' : 'bad email@gmail.com'
         }
-        with pytest.raises(ValueError):
-            User(**obj)
+        with pytest.raises(ValidationError):
+            get_model_obj(User, **obj)
     
     
     @staticmethod
     def testUnmodifiableCreatedat():
         obj = {
-            UserSchema.NAME.value : valid_name,
-            UserSchema.EMAIL.value : valid_email
+            'name' : valid_name,
+            'email' : valid_email
         }
-        user = User(**obj)
-        with pytest.raises(ValueError) as err_info:
+        user = get_model_obj(User, **obj)
+        with pytest.raises(ValidationError) as err_info:
             user.created_at -= datetime.timedelta(days=1)
         ic(str(err_info.value))
         assert str(err_info.value).split(':')[-1].strip() == UserErrorMessage.CreatedAt.CONSTANT.value
@@ -62,12 +62,12 @@ class TestValidation:
     @staticmethod
     def testLastActiveConflict():
         obj = {
-            UserSchema.NAME.value : valid_name,
-            UserSchema.EMAIL.value : valid_email
+            'name' : valid_name,
+            'email' : valid_email
         }
-        user = User(**obj)
+        user = get_model_obj(User, **obj)
         user.last_active_at += datetime.timedelta(days=1)
-        with pytest.raises(ValueError) as err_info:
+        with pytest.raises(ValidationError) as err_info:
             user.last_active_at -= datetime.timedelta(days=1)
         ic(str(err_info.value))
         assert str(err_info.value).split(':')[-1].strip() == UserErrorMessage.LastActiveAt.CONFLICT.value

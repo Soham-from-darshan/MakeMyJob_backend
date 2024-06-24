@@ -14,5 +14,4 @@ def client(app: Flask):
 
 @pytest.fixture
 def database(app):
-    with app.app_context():
-        yield db
+    return db

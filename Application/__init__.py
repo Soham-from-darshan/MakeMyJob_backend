@@ -1,16 +1,13 @@
-from flask import Flask, request
+from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import MappedAsDataclass, DeclarativeBase
 from werkzeug import exceptions
-from typing import cast
 from enum import StrEnum
 from flask_jwt_extended import JWTManager
 from flask_mail import Mail
-from cryptography.fernet import Fernet
-from base64 import b64encode
-from instance import DefaultConfiguration
+from apscheduler.schedulers.background import BackgroundScheduler
+import datetime
 
-CurrentConfiguration = DefaultConfiguration
 
 class Base(MappedAsDataclass, DeclarativeBase):
     def serialize(self) -> dict:
@@ -24,114 +21,89 @@ class Base(MappedAsDataclass, DeclarativeBase):
 
     
 db: SQLAlchemy = SQLAlchemy(model_class=Base)
-jwt = JWTManager()
-mail = Mail()
-cipher = None
+jwt: JWTManager = JWTManager()
+mail: Mail = Mail()
 
 
 def create_app(*,configClass: type) -> Flask:
-    """Create WSGI application instance, apply given configuration. Initialize extensions and create database from models then register blueprints and a generic error handler to jsonify any defalut errors. Return app instance.
+    import Application.errorhandlers as errhndl
+    import Application.models as models
+    import Application.controllers.authentication as auth
+    import Application.controllers.account as acc
 
-    Args:
-        config (type): A class that represents app configurations. This class is instantiated and passed to Flask.config.from_object method.
-
-    Returns:
-        Flask: The WSGI application instance.
-    """
     app = Flask(__name__, instance_relative_config=True)
     app.config.from_object(configClass())
     
-    global CurrentConfiguration
-    CurrentConfiguration = configClass
-
-    import Application.errorhandlers as errhndl
     app.register_error_handler(exceptions.HTTPException, errhndl.jsonify_default_errors)
-    app.register_error_handler(ValueError, errhndl.handle_value_error)
-    app.register_error_handler(KeyError, errhndl.handle_key_error)
+    app.register_error_handler(models.ValidationError, errhndl.handle_validation_errors)
 
     mail.init_app(app)
     jwt.init_app(app)
     db.init_app(app)
-    global cipher
-    key = Fernet.generate_key()
-    cipher = Fernet(key)
 
-
-    import Application.models as models
     with app.app_context():
         db.create_all()    
 
-    import Application.controllers.authentication as auth
-    import Application.controllers.account as acc
     app.register_blueprint(auth.bp)
     app.register_blueprint(acc.bp)
-    
-    @app.route('/')
-    def home():
-        return 'Hello world'
-    
-    # """These routes mimic the behaviour of unexpected errors. 
-    # """
-    # @app.route('/errorTest1')
-    # def unknownErrorTestingRoute1():
-    #     raise Exception('An Exception with single Argument')
-    
-    # @app.route('/errorTest2')
-    # def unknownErrorTestingRoute2():
-    #     raise Exception('An Exception','with','multiple','Arguments')
-    
+
+    if app.testing:
+        @app.route('/throw_error/<value>')
+        def simulate_internal_server_error(value):
+            if value == 'single':
+                raise Exception('Single arg')
+            elif value == 'multi':
+                raise Exception(*('Multi arg'.split()))
+            elif value == 'none':
+                raise Exception()
+
+    def delete_inactive_accounts():
+        print('Lol')
+        with app.app_context():
+            year_before_today = datetime.date.today() - datetime.timedelta(days=(app.config['ACCEPTABLE_INACTIVITY_IN_YEARS'] * 365))
+            accounts_to_be_deleted = models.User.query.filter(models.User.last_active_at <= year_before_today).all()
+            for account in accounts_to_be_deleted:
+                db.session.delete(account)
+            db.session.commit()
+
+    if app.config['ENABLE_SCHEDULER']:
+        scheduler = BackgroundScheduler()  
+        scheduler.add_job(delete_inactive_accounts, 'interval', hours=app.config['INACTIVE_ACCOUNT_DELETION_INTERVAL_IN_HOURS'])
+        scheduler.start()
+
     return app
 
 
-class EnumStore:
-    """A class to logically group all enums used by application. Enums are stored directly in this class or stored in nested classes to keep everything organized.
-    
-    There are several benifits of using enums over hardcoding strings:
-        - Change value at one place and it will reflect everywhere
-        - Error is detected if there is mistake in spelling unlike hardcoded strings
-        - The enums are logically grouped which means we can see natural patterns in code when its time extend features 
-    """
-    
-    class HTTPMethod(StrEnum):
-        GET = 'GET'
-        POST = 'POST'
-        PATCH = 'PATCH'
-        DELETE = 'DELETE'
-    
-    class JSONSchema:
-        """Collection of enums which represents json schema for api. 
-        """
-        class Error(StrEnum):
-            DESCRIPTION = 'description'
-        
-        class User(StrEnum):
-            NAME = 'name'
-            EMAIL = 'email'
-            CREATEDAT = 'created_at'
-            LASTACTIVEAT = 'last_active_at'
-    
-    class ErrorMessage:
-        class General(StrEnum):
-            MEDIATYPE = 'Only json is allowed as request body'
-            REQUIRED = 'The field {field} is required'
-        
-        class User:
-            class Name(StrEnum):
-                LENGTH = 'The length of name can be between {min} to {max} characters'.format(min=CurrentConfiguration.MIN_USERNAME_LENGTH,max=CurrentConfiguration.MAX_USERNAME_LENGTH)
-                CONTAIN = 'The username can only contain "{contain}"'.format(contain=CurrentConfiguration.USERNAME_CAN_CONTAIN)
-            
-            class CreatedAt(StrEnum):
-                CONSTANT = 'The field is constant'
-            
-            class LastActiveAt(StrEnum):
-                CONFLICT = 'The last date activity is conflicting'
 
-            class Email(StrEnum):
-                EXISTS = 'The email address for {address} does not exists'
+class ErrorMessage:
+    class General(StrEnum):
+        MEDIATYPE = 'Only json is allowed as request body'
+        REQUIRED = 'The field {field} is required'
+    
+    class Controller(StrEnum):
+        INVALID_OTP = 'The given OTP is invalid'
 
-        class Controller(StrEnum):
-            """Error Messages by controllers
-            """
-            EXISTS = 'User is already present in database'
-            # NOT_FOUND = 'User not found in database'
-            INVALID_OTP = 'The given OTP is invalid'
+    class User:
+        class Name(StrEnum):
+            LENGTH = 'The length of name can be between {min} to {max} characters'
+            CONTAIN = 'The username can only contain "{contain}"'
+        
+        class CreatedAt(StrEnum):
+            CONSTANT = 'The field is constant'
+        
+        class LastActiveAt(StrEnum):
+            CONFLICT = 'The last date activity is conflicting'
+
+        class Email(StrEnum):
+            EXISTS = 'The email address for {address} does not exists'
+
+
+
+def get_expected_keys(*keys: str, json_request = {}) -> list[str] | str:
+    vals = []
+    for key in keys:
+        try:
+            vals.append(json_request[key])
+        except KeyError:
+            raise exceptions.BadRequest(ErrorMessage.General.REQUIRED.value.format(field=key))
+    return vals if len(vals) > 1 else vals[0]

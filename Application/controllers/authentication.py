@@ -1,27 +1,17 @@
 from flask import Blueprint, request, jsonify, current_app
-from Application import EnumStore, db, jwt, mail, cipher, CurrentConfiguration
+from Application import ErrorMessage, db, get_expected_keys
 from Application.models import User
-from sqlalchemy.exc import IntegrityError
 from werkzeug import exceptions
 from flask_jwt_extended import jwt_required, create_access_token, get_jwt, get_jwt_identity, verify_jwt_in_request   
-from flask_mail import Message
-from random import randint
 import datetime
 import functools
-from icecream import ic
 import instance.utils
 
 bp = Blueprint('Auth',__name__, url_prefix='/auth')
 
-HTTPMethod = EnumStore.HTTPMethod
-UserScema = EnumStore.JSONSchema.User
-ErrorMessage = EnumStore.ErrorMessage.Controller
-OTP_EXPIRY = CurrentConfiguration.OTP_EXPIRY_IN_MINUTES
-send_otp = getattr(instance.utils, CurrentConfiguration.SEND_OTP)
-
+ControllerError = ErrorMessage.Controller
 
 def login_required():
-    """checks the presence of user in database and updates User.last_active_at if needed"""
     def wrapper(fn):
         @functools.wraps(fn)
         def decorator(*args, **kwargs):
@@ -38,11 +28,14 @@ def login_required():
     return wrapper	
 
 
-@bp.route('/getOTP',methods=[HTTPMethod.POST.value])
+@bp.route('/getOTP',methods=['POST'])
 def get_otp():
-    """sends the otp and token for given valid email, if email is unknown then verifies the given name in request and returns the token"""
+    cipher = current_app.config['CIPHER']
+    send_otp = getattr(instance.utils, current_app.config['SEND_OTP'])
+    OTP_EXPIRY = current_app.config['OTP_EXPIRY_IN_MINUTES']
+
     rdata = request.get_json()
-    email = rdata[UserScema.EMAIL.value]
+    email = get_expected_keys('email', json_request=rdata)
     user = User.query.filter_by(email=email).one_or_none()
     
     if user is not None:
@@ -51,7 +44,7 @@ def get_otp():
         return jsonify(token=create_access_token(identity=user.id, expires_delta=datetime.timedelta(minutes=OTP_EXPIRY), additional_claims={'otp':encrypted_otp})) 
 
                        
-    name = rdata[UserScema.NAME.value]
+    name = get_expected_keys('name', json_request=rdata)
     user = User(name=name,email=email) # validates new user
 
     otp = send_otp(to_address=email)
@@ -60,10 +53,11 @@ def get_otp():
 
 
 
-@bp.route('/login',methods=[HTTPMethod.POST.value])
+@bp.route('/login',methods=['POST'])
 @jwt_required()
-def login():    
-    """return the token for login if otp is confirmed here"""
+def login():
+    cipher = current_app.config['CIPHER']
+
     claims, rdata = get_jwt(), request.get_json()
     requested_otp, encrypted_otp = str(rdata['otp']), claims['otp']
     original_otp = (cipher.decrypt(encrypted_otp)).decode()
@@ -79,4 +73,4 @@ def login():
 
         return jsonify(token=create_access_token(identity=user.id, expires_delta=False))
 
-    raise exceptions.BadRequest(ErrorMessage.INVALID_OTP.value)
+    raise exceptions.BadRequest(ControllerError.INVALID_OTP.value)
