@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import MappedAsDataclass, DeclarativeBase
 from werkzeug import exceptions
@@ -58,7 +58,6 @@ def create_app(*,configClass: type) -> Flask:
                 raise Exception()
 
     def delete_inactive_accounts():
-        print('Lol')
         with app.app_context():
             year_before_today = datetime.date.today() - datetime.timedelta(days=(app.config['ACCEPTABLE_INACTIVITY_IN_YEARS'] * 365))
             accounts_to_be_deleted = models.User.query.filter(models.User.last_active_at <= year_before_today).all()
@@ -70,6 +69,10 @@ def create_app(*,configClass: type) -> Flask:
         scheduler = BackgroundScheduler()  
         scheduler.add_job(delete_inactive_accounts, 'interval', hours=app.config['INACTIVE_ACCOUNT_DELETION_INTERVAL_IN_HOURS'])
         scheduler.start()
+
+    @app.route('/')
+    def home():
+        return redirect(url_for('static',filename='htmlcov/index.html'))
 
     return app
 

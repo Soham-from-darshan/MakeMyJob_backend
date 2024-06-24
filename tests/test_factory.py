@@ -13,3 +13,8 @@ class TestApplicationFactory:
         configurations = [field for field in dir(configClass) if field.isupper() and not field.startswith('_')]        
         for config in configurations:
             assert app.config[config] == getattr(configClass, config)
+        
+    @staticmethod
+    def testHome(client):
+        res = client.get('/', follow_redirects=True)
+        assert res.status_code == 200 
